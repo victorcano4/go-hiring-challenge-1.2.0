@@ -3,6 +3,7 @@ package catalog
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/mytheresa/go-hiring-challenge/models"
 )
@@ -33,7 +34,35 @@ func NewCatalogHandler(r models.ProductFetcher) *CatalogHandler {
 }
 
 func (h *CatalogHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
-	res, err := h.repo.GetAllProducts()
+	offsetParam := r.URL.Query().Get("offset")
+	limitParam := r.URL.Query().Get("limit")
+
+	offset := 0
+	limit := 10
+
+	if offsetParam != "" {
+		parsedOffset, err := strconv.Atoi(offsetParam)
+		if err != nil {
+			http.Error(w, "Invalid offset parameter", http.StatusBadRequest)
+		}
+		if parsedOffset >= 0 {
+			offset = parsedOffset
+		}
+	}
+
+	if limitParam != "" {
+		parsedLimit, err := strconv.Atoi(limitParam)
+		if err != nil {
+			http.Error(w, "Invalid limit parameter", http.StatusBadRequest)
+		}
+		if parsedLimit > 100 {
+			limit = 100
+		} else if parsedLimit >= 1 {
+			limit = parsedLimit
+		}
+	}
+
+	res, total, err := h.repo.GetPaginatedProducts(offset, limit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -57,7 +86,11 @@ func (h *CatalogHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 	// Return the products as a JSON response
 	w.Header().Set("Content-Type", "application/json")
 
-	response := Response{
+	response := struct {
+		Total    int       `json:"total"`
+		Products []Product `json:"products"`
+	}{
+		Total:    total,
 		Products: products,
 	}
 

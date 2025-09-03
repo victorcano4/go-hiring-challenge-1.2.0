@@ -20,7 +20,7 @@ func NewProductsRepository(db *gorm.DB) ProductFetcher {
 
 func (pr ProductsRepository) GetAllProducts() ([]Product, error) {
 	var products []Product
-	if err := pr.db.Preload("Variants").Find(&products).Error; err != nil {
+	if err := pr.db.Preload("Variants").Preload("Category").Find(&products).Error; err != nil {
 		return nil, err
 	}
 	return products, nil

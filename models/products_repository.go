@@ -7,6 +7,7 @@ import (
 type ProductFetcher interface {
 	GetProducts(int, int, ProductFilterOptions) ([]Product, int, error)
 	GetProductDetails(string) (Product, error)
+	GetAllCategories() ([]ProductCategory, error)
 }
 
 type ProductsRepository struct {
@@ -49,4 +50,13 @@ func (r *ProductsRepository) GetProductDetails(code string) (Product, error) {
 		return product, err
 	}
 	return product, nil
+}
+
+// GetAllCategories fetches all product categories from the database
+func (r *ProductsRepository) GetAllCategories() ([]ProductCategory, error) {
+	var categories []ProductCategory
+	if err := r.db.Find(&categories).Error; err != nil {
+		return nil, err
+	}
+	return categories, nil
 }

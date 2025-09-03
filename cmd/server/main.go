@@ -42,6 +42,7 @@ func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/catalog", cat.HandleGet).Methods("GET")
 	router.HandleFunc("/catalog/{code}", cat.HandleGetProductDetails).Methods("GET")
+	router.HandleFunc("/categories", cat.HandleGetCategories).Methods("GET")
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf("localhost:%s", os.Getenv("HTTP_PORT")),

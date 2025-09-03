@@ -169,3 +169,28 @@ func (h *CatalogHandler) HandleGetProductDetails(w http.ResponseWriter, r *http.
 		return
 	}
 }
+
+// HandleGetCategories handles the categories endpoint
+func (h *CatalogHandler) HandleGetCategories(w http.ResponseWriter, r *http.Request) {
+	categories, err := h.repo.GetAllCategories()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Map categories to response
+	response := make([]ProductCategory, len(categories))
+	for i, c := range categories {
+		response[i] = ProductCategory{
+			Code: c.Code,
+			Name: c.Name,
+		}
+	}
+
+	// Return the categories as a JSON response
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}

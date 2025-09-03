@@ -42,27 +42,47 @@ func (h *CatalogHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 
 	if offsetParam != "" {
 		parsedOffset, err := strconv.Atoi(offsetParam)
-		if err != nil {
-			http.Error(w, "Invalid offset parameter", http.StatusBadRequest)
-		}
-		if parsedOffset >= 0 {
+		if err == nil && parsedOffset >= 0 {
 			offset = parsedOffset
 		}
 	}
 
 	if limitParam != "" {
 		parsedLimit, err := strconv.Atoi(limitParam)
-		if err != nil {
-			http.Error(w, "Invalid limit parameter", http.StatusBadRequest)
-		}
-		if parsedLimit > 100 {
-			limit = 100
-		} else if parsedLimit >= 1 {
-			limit = parsedLimit
+		if err == nil {
+			if parsedLimit > 100 || parsedLimit < 1 {
+				limit = 100
+			} else {
+				limit = parsedLimit
+			}
+		} else {
+			parsedLimit = 100
 		}
 	}
 
-	res, total, err := h.repo.GetPaginatedProducts(offset, limit)
+	// Parse query parameters for filtering
+	categoryParam := r.URL.Query().Get("category")
+	priceLessThanParam := r.URL.Query().Get("priceLessThan")
+
+	// Initialize filtering options
+	filterOptions := models.ProductFilterOptions{}
+
+	if categoryParam != "" {
+		filterOptions.Category = &categoryParam
+	}
+
+	if priceLessThanParam != "" {
+		parsedPrice, err := strconv.ParseFloat(priceLessThanParam, 64)
+		if err != nil {
+			http.Error(w, "Invalid priceLessThan parameter", http.StatusBadRequest)
+		}
+		if parsedPrice > 0 {
+			filterOptions.MaxPrice = &parsedPrice
+		}
+	}
+
+	// Fetch products with filtering and pagination
+	res, total, err := h.repo.GetProducts(offset, limit, filterOptions)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

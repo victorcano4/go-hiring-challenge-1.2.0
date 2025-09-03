@@ -5,7 +5,7 @@ import (
 )
 
 type ProductFetcher interface {
-	GetPaginatedProducts(int, int) ([]Product, int, error)
+	GetProducts(int, int, ProductFilterOptions) ([]Product, int, error)
 }
 
 type ProductsRepository struct {
@@ -18,7 +18,7 @@ func NewProductsRepository(db *gorm.DB) ProductFetcher {
 	}
 }
 
-func (r *ProductsRepository) GetPaginatedProducts(offset, limit int) ([]Product, int, error) {
+func (r *ProductsRepository) GetProducts(offset, limit int, filters ProductFilterOptions) ([]Product, int, error) {
 	var products []Product
 	var total int64
 
@@ -26,7 +26,15 @@ func (r *ProductsRepository) GetPaginatedProducts(offset, limit int) ([]Product,
 		return nil, 0, err
 	}
 
-	if err := r.db.Preload("Category").Offset(offset).Limit(limit).Find(&products).Error; err != nil {
+	paginatedProducts := r.db.Preload("Category").Offset(offset).Limit(limit)
+	if filters.MaxPrice != nil {
+		paginatedProducts = paginatedProducts.Where("price < ?", *filters.MaxPrice)
+	}
+	if filters.Category != nil {
+		paginatedProducts = paginatedProducts.Joins("JOIN product_categories ON product_categories.id = products.category_id").Where("product_categories.code = ?", *filters.Category)
+	}
+
+	if err := paginatedProducts.Find(&products).Error; err != nil {
 		return nil, 0, err
 	}
 

@@ -1,6 +1,7 @@
 package catalog_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -16,7 +17,7 @@ import (
 )
 
 func TestHandleGetCategories(t *testing.T) {
-	mockRepo := mocks.NewMockProductRepository()
+	mockRepo := mocks.NewMockProductDataAccessor()
 	handler := catalog.NewCatalogHandler(mockRepo)
 
 	t.Run("Categories found", func(t *testing.T) {
@@ -85,6 +86,51 @@ func TestHandleGetCategories(t *testing.T) {
 		r.HandleFunc("/categories", handler.HandleGetCategories)
 
 		req := httptest.NewRequest(http.MethodGet, "/categories", nil)
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusInternalServerError, resp.Code)
+		assert.Equal(t, "database error\n", resp.Body.String())
+		mockRepo.AssertExpectations(t)
+	})
+}
+
+func TestHandleCreateCategory(t *testing.T) {
+	mockRepo := mocks.NewMockProductDataAccessor()
+	handler := catalog.NewCatalogHandler(mockRepo)
+
+	t.Run("Successfully create category", func(t *testing.T) {
+		mockRepo.ExpectedCalls = nil
+
+		newCategory := models.ProductCategory{Code: "NEW", Name: "New Category"}
+		mockRepo.On("CreateCategory", newCategory).Return(nil).Once()
+
+		r := mux.NewRouter()
+		r.HandleFunc("/categories", handler.HandleCreateCategory).Methods(http.MethodPost)
+
+		body, _ := json.Marshal(newCategory)
+		req := httptest.NewRequest(http.MethodPost, "/categories", bytes.NewReader(body))
+		resp := httptest.NewRecorder()
+
+		r.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusCreated, resp.Code)
+		assert.Equal(t, "{\"code\":\"NEW\",\"name\":\"New Category\"}\n", resp.Body.String())
+		mockRepo.AssertExpectations(t)
+	})
+
+	t.Run("Error creating category", func(t *testing.T) {
+		mockRepo.ExpectedCalls = nil
+
+		newCategory := models.ProductCategory{Code: "NEW", Name: "New Category"}
+		mockRepo.On("CreateCategory", newCategory).Return(errors.New("database error")).Once()
+
+		r := mux.NewRouter()
+		r.HandleFunc("/categories", handler.HandleCreateCategory).Methods(http.MethodPost)
+
+		body, _ := json.Marshal(newCategory)
+		req := httptest.NewRequest(http.MethodPost, "/categories", bytes.NewReader(body))
 		resp := httptest.NewRecorder()
 
 		r.ServeHTTP(resp, req)

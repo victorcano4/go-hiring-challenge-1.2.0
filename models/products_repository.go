@@ -4,17 +4,18 @@ import (
 	"gorm.io/gorm"
 )
 
-type ProductFetcher interface {
+type ProductDataAccessor interface {
 	GetProducts(int, int, ProductFilterOptions) ([]Product, int, error)
 	GetProductDetails(string) (Product, error)
 	GetAllCategories() ([]ProductCategory, error)
+	CreateCategory(ProductCategory) error
 }
 
 type ProductsRepository struct {
 	db *gorm.DB
 }
 
-func NewProductsRepository(db *gorm.DB) ProductFetcher {
+func NewProductsRepository(db *gorm.DB) ProductDataAccessor {
 	return &ProductsRepository{
 		db: db,
 	}
@@ -59,4 +60,11 @@ func (r *ProductsRepository) GetAllCategories() ([]ProductCategory, error) {
 		return nil, err
 	}
 	return categories, nil
+}
+
+func (r *ProductsRepository) CreateCategory(category ProductCategory) error {
+	if err := r.db.Create(&category).Error; err != nil {
+		return err
+	}
+	return nil
 }

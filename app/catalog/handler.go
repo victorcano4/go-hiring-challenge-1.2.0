@@ -34,10 +34,10 @@ type Variant struct {
 }
 
 type CatalogHandler struct {
-	repo models.ProductFetcher
+	repo models.ProductDataAccessor
 }
 
-func NewCatalogHandler(r models.ProductFetcher) *CatalogHandler {
+func NewCatalogHandler(r models.ProductDataAccessor) *CatalogHandler {
 	return &CatalogHandler{
 		repo: r,
 	}
@@ -190,6 +190,36 @@ func (h *CatalogHandler) HandleGetCategories(w http.ResponseWriter, r *http.Requ
 	// Return the categories as a JSON response
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *CatalogHandler) HandleCreateCategory(w http.ResponseWriter, r *http.Request) {
+	var newCategory models.ProductCategory
+
+	// Parse the JSON body
+	if err := json.NewDecoder(r.Body).Decode(&newCategory); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Validate the category details
+	if newCategory.Code == "" || newCategory.Name == "" {
+		http.Error(w, "Category code and name are required", http.StatusBadRequest)
+		return
+	}
+
+	// Insert the new category into the database
+	if err := h.repo.CreateCategory(newCategory); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Respond with the created category
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	if err := json.NewEncoder(w).Encode(newCategory); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

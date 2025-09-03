@@ -5,25 +5,30 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type MockProductRepository struct {
+type ProductRepositoryMock struct {
 	mock.Mock
 }
 
-func NewMockProductRepository() *MockProductRepository {
-	return &MockProductRepository{}
+func NewMockProductDataAccessor() *ProductRepositoryMock {
+	return &ProductRepositoryMock{}
 }
 
-func (m *MockProductRepository) GetProducts(offset int, limit int, filters models.ProductFilterOptions) ([]models.Product, int, error) {
+func (m *ProductRepositoryMock) GetProducts(offset int, limit int, filters models.ProductFilterOptions) ([]models.Product, int, error) {
 	args := m.Called(offset, limit, filters)
 	return args.Get(0).([]models.Product), args.Int(1), args.Error(2)
 }
 
-func (m *MockProductRepository) GetProductDetails(code string) (models.Product, error) {
+func (m *ProductRepositoryMock) GetProductDetails(code string) (models.Product, error) {
 	args := m.Called(code)
 	return args.Get(0).(models.Product), args.Error(1)
 }
 
-func (m *MockProductRepository) GetAllCategories() ([]models.ProductCategory, error) {
+func (m *ProductRepositoryMock) GetAllCategories() ([]models.ProductCategory, error) {
 	args := m.Called()
 	return args.Get(0).([]models.ProductCategory), args.Error(1)
+}
+
+func (m *ProductRepositoryMock) CreateCategory(category models.ProductCategory) error {
+	args := m.Called(category)
+	return args.Error(0)
 }

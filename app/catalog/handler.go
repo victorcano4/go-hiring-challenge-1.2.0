@@ -163,7 +163,6 @@ func (h *CatalogHandler) HandleGetProductDetails(w http.ResponseWriter, r *http.
 	api.OKResponse(w, response)
 }
 
-// HandleGetCategories handles the categories endpoint
 func (h *CatalogHandler) HandleGetCategories(w http.ResponseWriter, r *http.Request) {
 	categories, err := h.repo.GetAllCategories()
 	if err != nil {
@@ -171,7 +170,6 @@ func (h *CatalogHandler) HandleGetCategories(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Map categories to response
 	response := make([]ProductCategory, len(categories))
 	for i, c := range categories {
 		response[i] = ProductCategory{
@@ -186,19 +184,16 @@ func (h *CatalogHandler) HandleGetCategories(w http.ResponseWriter, r *http.Requ
 func (h *CatalogHandler) HandleCreateCategory(w http.ResponseWriter, r *http.Request) {
 	var newCategory models.ProductCategory
 
-	// Parse the JSON body
 	if err := json.NewDecoder(r.Body).Decode(&newCategory); err != nil {
 		api.ErrorResponse(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
-	// Validate the category details
 	if newCategory.Code == "" || newCategory.Name == "" {
 		api.ErrorResponse(w, http.StatusBadRequest, "Category code and name are required")
 		return
 	}
 
-	// Insert the new category into the database
 	if err := h.repo.CreateCategory(newCategory); err != nil {
 		api.ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return

@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/mytheresa/go-hiring-challenge/app/api"
 	"github.com/mytheresa/go-hiring-challenge/models"
 	"gorm.io/gorm"
 )
@@ -84,7 +85,8 @@ func (h *CatalogHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 	if priceLessThanParam != "" {
 		parsedPrice, err := strconv.ParseFloat(priceLessThanParam, 64)
 		if err != nil {
-			http.Error(w, "Invalid priceLessThan parameter", http.StatusBadRequest)
+			api.ErrorResponse(w, http.StatusBadRequest, "Invalid priceLessThan parameter")
+			return
 		}
 		if parsedPrice > 0 {
 			filterOptions.MaxPrice = &parsedPrice
@@ -94,7 +96,7 @@ func (h *CatalogHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 	// Fetch products with filtering and pagination
 	res, total, err := h.repo.GetProducts(offset, limit, filterOptions)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		api.ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -114,8 +116,6 @@ func (h *CatalogHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return the products as a JSON response
-	w.Header().Set("Content-Type", "application/json")
-
 	response := struct {
 		Total    int       `json:"total"`
 		Products []Product `json:"products"`
@@ -124,10 +124,7 @@ func (h *CatalogHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 		Products: products,
 	}
 
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	api.OKResponse(w, response)
 }
 
 func (h *CatalogHandler) HandleGetProductDetails(w http.ResponseWriter, r *http.Request) {
@@ -137,10 +134,10 @@ func (h *CatalogHandler) HandleGetProductDetails(w http.ResponseWriter, r *http.
 	product, err := h.repo.GetProductDetails(codeParam)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			http.Error(w, "Product not found", http.StatusNotFound)
+			api.ErrorResponse(w, http.StatusNotFound, "Product not found")
 			return
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		api.ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -163,18 +160,14 @@ func (h *CatalogHandler) HandleGetProductDetails(w http.ResponseWriter, r *http.
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	api.OKResponse(w, response)
 }
 
 // HandleGetCategories handles the categories endpoint
 func (h *CatalogHandler) HandleGetCategories(w http.ResponseWriter, r *http.Request) {
 	categories, err := h.repo.GetAllCategories()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		api.ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -187,12 +180,7 @@ func (h *CatalogHandler) HandleGetCategories(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	// Return the categories as a JSON response
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	api.OKResponse(w, response)
 }
 
 func (h *CatalogHandler) HandleCreateCategory(w http.ResponseWriter, r *http.Request) {
@@ -200,27 +188,21 @@ func (h *CatalogHandler) HandleCreateCategory(w http.ResponseWriter, r *http.Req
 
 	// Parse the JSON body
 	if err := json.NewDecoder(r.Body).Decode(&newCategory); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		api.ErrorResponse(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
 	// Validate the category details
 	if newCategory.Code == "" || newCategory.Name == "" {
-		http.Error(w, "Category code and name are required", http.StatusBadRequest)
+		api.ErrorResponse(w, http.StatusBadRequest, "Category code and name are required")
 		return
 	}
 
 	// Insert the new category into the database
 	if err := h.repo.CreateCategory(newCategory); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		api.ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	// Respond with the created category
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(newCategory); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	api.CreatedResponse(w, newCategory)
 }

@@ -91,7 +91,7 @@ func TestHandleGetCategories(t *testing.T) {
 		r.ServeHTTP(resp, req)
 
 		assert.Equal(t, http.StatusInternalServerError, resp.Code)
-		assert.Equal(t, "database error\n", resp.Body.String())
+		assert.Equal(t, "{\"error\":\"database error\"}\n", resp.Body.String())
 		mockRepo.AssertExpectations(t)
 	})
 }
@@ -136,7 +136,7 @@ func TestHandleCreateCategory(t *testing.T) {
 		r.ServeHTTP(resp, req)
 
 		assert.Equal(t, http.StatusInternalServerError, resp.Code)
-		assert.Equal(t, "database error\n", resp.Body.String())
+		assert.Equal(t, "{\"error\":\"database error\"}\n", resp.Body.String())
 		mockRepo.AssertExpectations(t)
 	})
 }

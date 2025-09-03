@@ -6,6 +6,7 @@ import (
 
 type ProductFetcher interface {
 	GetProducts(int, int, ProductFilterOptions) ([]Product, int, error)
+	GetProductDetails(string) (Product, error)
 }
 
 type ProductsRepository struct {
@@ -39,4 +40,13 @@ func (r *ProductsRepository) GetProducts(offset, limit int, filters ProductFilte
 	}
 
 	return products, int(total), nil
+}
+
+// GetProductDetails fetches product details by code, including its variants and category
+func (r *ProductsRepository) GetProductDetails(code string) (Product, error) {
+	var product Product
+	if err := r.db.Preload("Variants").Preload("Category").Where("code = ?", code).First(&product).Error; err != nil {
+		return product, err
+	}
+	return product, nil
 }

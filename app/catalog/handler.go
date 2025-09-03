@@ -2,10 +2,13 @@ package catalog
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
+	"github.com/gorilla/mux"
 	"github.com/mytheresa/go-hiring-challenge/models"
+	"gorm.io/gorm"
 )
 
 type Response struct {
@@ -16,11 +19,18 @@ type Product struct {
 	Code     string           `json:"code"`
 	Price    float64          `json:"price"`
 	Category *ProductCategory `json:"category"`
+	Variants []Variant        `json:"variants"`
 }
 
 type ProductCategory struct {
 	Name string `json:"name"`
 	Code string `json:"code"`
+}
+
+type Variant struct {
+	Name  string  `json:"name"`
+	Sku   string  `json:"sku"`
+	Price float64 `json:"price"`
 }
 
 type CatalogHandler struct {
@@ -114,6 +124,46 @@ func (h *CatalogHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 		Products: products,
 	}
 
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *CatalogHandler) HandleGetProductDetails(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	codeParam := vars["code"]
+
+	product, err := h.repo.GetProductDetails(codeParam)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			http.Error(w, "Product not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response := Product{
+		Code:     product.Code,
+		Price:    product.Price.InexactFloat64(),
+		Category: &ProductCategory{Name: product.Category.Name, Code: product.Category.Code},
+		Variants: make([]Variant, len(product.Variants)),
+	}
+
+	for i, v := range product.Variants {
+		variantPrice := v.Price
+		if variantPrice.IsZero() {
+			variantPrice = product.Price
+		}
+		response.Variants[i] = Variant{
+			Name:  v.Name,
+			Sku:   v.SKU,
+			Price: variantPrice.InexactFloat64(),
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

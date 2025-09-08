@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -18,7 +17,7 @@ import (
 
 func main() {
 	// Load environment variables from .env file
-	if err := godotenv.Load(".env"); err != nil {
+	if err := godotenv.Load("../../.env"); err != nil {
 		log.Fatalf("Error loading .env file: %s", err)
 	}
 
@@ -30,6 +29,7 @@ func main() {
 	db, close := database.New(
 		os.Getenv("POSTGRES_USER"),
 		os.Getenv("POSTGRES_PASSWORD"),
+		os.Getenv("POSTGRES_HOST"),
 		os.Getenv("POSTGRES_DB"),
 		os.Getenv("POSTGRES_PORT"),
 	)
@@ -46,7 +46,8 @@ func main() {
 	router.HandleFunc("/categories", cat.HandleCreateCategory).Methods("POST")
 
 	srv := &http.Server{
-		Addr:    fmt.Sprintf("localhost:%s", os.Getenv("HTTP_PORT")),
+		// I created HTTP_HOST environment variable to be able to have a different value for debugging and accessing from a docker container
+		Addr:    os.Getenv("HTTP_HOST") + ":" + os.Getenv("HTTP_PORT"),
 		Handler: router,
 	}
 

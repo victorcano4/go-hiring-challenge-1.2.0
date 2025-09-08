@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"github.com/mytheresa/go-hiring-challenge/app/catalog"
 	"github.com/mytheresa/go-hiring-challenge/app/database"
@@ -17,7 +17,7 @@ import (
 
 func main() {
 	// Load environment variables from .env file
-	if err := godotenv.Load(".env"); err != nil {
+	if err := godotenv.Load("../../.env"); err != nil {
 		log.Fatalf("Error loading .env file: %s", err)
 	}
 
@@ -29,6 +29,7 @@ func main() {
 	db, close := database.New(
 		os.Getenv("POSTGRES_USER"),
 		os.Getenv("POSTGRES_PASSWORD"),
+		os.Getenv("POSTGRES_HOST"),
 		os.Getenv("POSTGRES_DB"),
 		os.Getenv("POSTGRES_PORT"),
 	)
@@ -38,14 +39,16 @@ func main() {
 	prodRepo := models.NewProductsRepository(db)
 	cat := catalog.NewCatalogHandler(prodRepo)
 
-	// Set up routing
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /catalog", cat.HandleGet)
+	router := mux.NewRouter()
+	router.HandleFunc("/catalog", cat.HandleGet).Methods("GET")
+	router.HandleFunc("/catalog/{code}", cat.HandleGetProductDetails).Methods("GET")
+	router.HandleFunc("/categories", cat.HandleGetCategories).Methods("GET")
+	router.HandleFunc("/categories", cat.HandleCreateCategory).Methods("POST")
 
-	// Set up the HTTP server
 	srv := &http.Server{
-		Addr:    fmt.Sprintf("localhost:%s", os.Getenv("HTTP_PORT")),
-		Handler: mux,
+		// I created HTTP_HOST environment variable to be able to have a different value for debugging and accessing from a docker container
+		Addr:    os.Getenv("HTTP_HOST") + ":" + os.Getenv("HTTP_PORT"),
+		Handler: router,
 	}
 
 	// Start the server
